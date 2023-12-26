@@ -1,4 +1,3 @@
-
 log = console.log;
 HTMLCollection.prototype.toArray = function() {
     let arr = [];
@@ -8,7 +7,6 @@ HTMLCollection.prototype.toArray = function() {
     return arr;
 };
 NodeList.prototype.toArray = HTMLCollection.prototype.toArray;
-
 var chunk = 0;
 function download( data ) {
     let keys = Object.keys( data );
@@ -29,55 +27,47 @@ function download( data ) {
         log( "dl removed" );
     }, 5000 );
 }
-
+function get_lis() {
+    let chats = document.querySelectorAll( "[data-list-id=chat-messages]" )[ 0 ];
+    return chats.querySelectorAll( "li" ).toArray();
+}
 window.data = {};
-
-function go2() {
-    let seen_ids = {};
-    let num_done = 0;
+function go( skip_to_id ) {    // go( "chat-messages-1119881392768163901-1136806512094875669" )
     function crawl() {
-        let chats = document.querySelectorAll( "[data-list-id=chat-messages]" )[ 0 ];
-        let arr = chats.querySelectorAll( "li" );
-        let n = arr.length - 1;
+        let arr = get_lis();
         let li = null;
         let id = null;
-        while( true ) {
-            li = arr[ n ];
-            if( ! li || num_done == 1000000 || window.kill ) { 
-                window.kill = false;
-                log( "Done" );
-                return;
-            }
+        let new_seen = 0;
+        while( arr.length > 0 ) {
+            li = arr.pop();
+            if( window.kill ) { window.kill = false; return; }
             id = li.id;
-            if( seen_ids[ id ] === undefined ) {
-                seen_ids[ id ] = li;
-                let text = li.innerText;
-                data[ id ] = { id, text };
+            let tel = li.querySelectorAll( "time" ).toArray()[0];
+            let stamp = tel ? tel.getAttribute( "datetime" ) : "-";
+            let text = li.innerText;
+            let d = { id, stamp, text };
+            if( data[ id ] === undefined ) {
+                new_seen += 1;
+                data[ id ] = d;
                 let l = Object.keys( data ).length
                 log( l+": "+text.replace( /\n/g, " " ).substr( 0, 70 )+"..." );
-                break;
+                //break;
             }
-            n -= 1;
-            num_done += 1;
         }
-        li.scrollIntoView();
-        li.style.opacity = "0.2";
-        let keys = Object.keys( seen_ids );
-        if( keys.length % 100 == 0 ) {
-            //let data = keys.map( k => {
-             //   return seen_ids[ k ];
-            //} );
-            download( data );
-            setTimeout( crawl, 10000 );
-        } else {
-            setTimeout( crawl, 500 );
+        if( li ) 
+            li.scrollIntoView();
+        if( new_seen == 0 ) {
+            log( "Done" );
+            download();
+            return;
         }
+        setTimeout( crawl, 3000 );
     }
     crawl();
 }
 
 
-function go( who ) {
+function go_old( who ) {
     chunk = 0;
     all = {};
     downloaded = {};
